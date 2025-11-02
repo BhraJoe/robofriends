@@ -1,8 +1,81 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom/client';
 import './index.css';
-import App from './App';
+import Card from './Card';
+import SearchBox from './SearchBox';
 import reportWebVitals from './reportWebVitals';
+import 'tachyons';  // Importing tachyons CSS framework
+
+const App = () => {
+  const [searchField, setSearchField] = useState('');
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    setLoading(true);
+    fetch('https://jsonplaceholder.typicode.com/users', { signal: controller.signal })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        // jsonplaceholder users have 'name' and 'email' fields
+        setUsers(data);
+        setLoading(false);
+      })
+      .catch((err) => {
+        if (err.name === 'AbortError') return;
+        setError(err.message || 'Failed to fetch users');
+        setLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  const onSearchChange = (event) => {
+    setSearchField(event.target.value);
+  };
+
+  const filteredRobots = users.filter(user => {
+    return (
+      user.name.toLowerCase().includes(searchField.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchField.toLowerCase())
+    );
+  });
+
+  return (
+    <div className='container'>
+      <header className="header">
+        <h1>RoboFriends</h1>
+        <SearchBox searchChange={onSearchChange} />
+      </header>
+
+      {loading && (
+        <div style={{ textAlign: 'center', color: 'white', paddingTop: 40 }}>Loading users...</div>
+      )}
+
+      {error && (
+        <div style={{ textAlign: 'center', color: '#ffdddd', paddingTop: 20 }}>
+          Error loading users: {error}
+        </div>
+      )}
+
+      {!loading && !error && (
+        <div className="card-list">
+          {filteredRobots.map((user) => (
+            <Card
+              key={user.id}
+              title={user.name}
+              description={user.email}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
